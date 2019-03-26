@@ -87,16 +87,72 @@ else:
     print("22")
 ```
 
-4.multiprocessing
+4.multiprocessing,常用，可以跨平台
 
 在windows上创建进程
 
 ```python
-from multiprocessing import process
+from multiprocessing import Process
+import time
+def test():
+    while True:
+        print("11111111111")
+        time.sleep(1)
+
+#把函数放入进程
+if __name__ == "__main__":
+    p = Process(target= test)
+    p.start()#启动进程
+    p.terminate()#结束子进程
+    p.close()
+
+while True:
+    print("------maun----")
+    time.sleep(1)
+    
+p.join([timeout])#堵塞，等待p进程执行完或等待多少秒，主进程才会继续
+```
+
+5.process的子类
+
+```python
+from multiprocessing import Process
+import time
+
+class NewProcess(Process):
+    def run(self):
+        while True:
+            print("------------1-------------")
+            time.sleep(1)
+p = NewProcess()
+
+p,start()
+
+while True:
+	print("---------main------")
+    time.sleep(1)
 
 ```
 
+6.进程池
 
+```python
+from multiprocessing import Pool
+import os, time, random
 
+def worker(num):
+    for i in range(random.randint(1, 3)):
+        print("------pid=%d---- num=%d" % (os.getpid(), num))
+        time.sleep(1)
 
+if __name__ == '__main__':
+    pool = Pool(3)  # 定义一个进程池，最大进程数3
+    for i in range(10):
+        #每次循环将会用空闲出来的子进程去调用目标
+        #如果添加的数量超过了进程池中进程的个数的话，那么不会导致添加不进入。添加到进程中的任务，如果还没有被执行的话那么此时，他们会等待进程池中的进程完成一个任务后，会自动去用刚刚的那个进程，完成当前新任务。
+        pool.apply_async(worker, (i,))  #以元组的方式传值
+    pool.close()  # 关闭进程池，关闭后pool不在接收新的请求
+    pool.join()  # 等待pool中所有子进程执行完成，必须放在close语句之后
+
+```
 
