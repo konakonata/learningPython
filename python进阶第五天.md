@@ -156,3 +156,149 @@ if __name__ == '__main__':
 
 ```
 
+7.进程间通信--Queue(队列)
+
+```python
+#coding=utf-8
+from multiprocessing import Queue
+
+q = Queue(3)#初始化一个Queue对象，最多可接收三条put消息
+
+q.put("消息1")
+q.put("消息2")
+print(q.full())#false
+q.put("消息3")
+print(q.full())#true
+q.put("消息4")#队列已满，再put，默认时堵塞的，会等待空出队列再put
+#因为消息队列已满，下面的 try都会捕获异常，第一个try会等待2s后再抛出异常
+#第二个try会立刻抛出
+try:
+    q.put("消息4",True,2)
+except:
+    print("消息队列已满，现有消息数量：%s",q.qsize())
+
+try:
+    q.put_nowait("消息4")
+except:
+    print("消息队列已满，现有消息数量：%s",q.qsize())
+
+#推荐方式，先判断是否满，再put
+if not q.full():
+    q.put_nowait("消息4")
+#读取消息时，先判断是否为空，再读取
+if not q.empty():
+    for i in range(q.qsize()):
+        print(q.get_nowait())
+```
+
+```python
+#进程通信，读取子进程读取写入子进程写入的数据
+from multiprocessing import Process, Queue
+import os, time, random
+
+
+def write(q):
+    for value in ['a', 'b', 'c']:
+        print("put %s into queue" % value)
+        q.put(value)
+        time.sleep(random.random())
+
+
+def read(q):
+    while True:
+        if not q.empty():
+            value = q.get(True)  # 读取值之后，队列中也就没了
+            print("get %s from queue" % value)
+            time.sleep(random.random())
+        else:
+            break
+
+
+if __name__ == '__main__':
+    q = Queue()
+    # 先调用写入队列的子进程
+    pw = Process(target=write,args=(q,))#传参方式
+    pw.start()
+    pw.join()
+
+    # 再调用读取队列的子进程
+    pr = Process(target=read, args = {q,})#传参方式
+    pr.start()
+    pr.join()
+
+```
+
+8.进程池中的Queue
+
+```python
+#进程池中的Queue
+from multiprocessing import Manager,Pool
+import os,time,random
+
+def reader(q):
+    print("reader启动(%s)，父进程为(%s)"%(os.getpid(),os.getppid()))
+    for i in range(q.qsize()):
+        print("reader从Queue获取到消息:%s"%q.get(True))
+
+def writer(q):
+    print("writer启动(%s),父进程为(%s)"%(os.getpid(),os.getppid()))
+    for i in "zhangfucheng":
+        q.put(i)
+
+
+if __name__=="__main__":
+    print("(%s) start"%os.getpid())
+    q = Manager().Queue()#使用Manager中的Queue来初始化
+
+    po = Pool()
+    #使用阻塞模式创建进程，这样不需要再reader中死循环了，可以让writer完全执行完后，再用reader
+
+    po.apply(writer, (q,))#apply方法是阻塞的。就是等待当前子进程执行完毕后，在执行下一个进程。
+    po.apply(reader, (q,))#apply_async 是异步非阻塞的。
+    po.close()
+    po.join()
+    print("(%s) End"%os.getpid())
+```
+
+9.多进程拷贝文件
+
+```python
+from multiprocessing import Pool
+import os
+
+
+# 复制文件的功能函数
+def copyFileTask(name, oldFloderName,newFloderName):
+    os.chdir(oldFloderName)
+    fr = open(name)
+    os.chdir(newFloderName)
+    fw = open(name, 'x')
+    content = fr.read()
+    fw.write(content)
+    fr.close()
+    fw.close()
+
+def main():
+    oldFloderName = input("请输入文件夹的名字：")
+
+    newFloderName = oldFloderName + "-复件"
+    # 新建文件夹
+    os.mkdir(newFloderName)
+    # 获取旧文件夹所有文件名
+    fileNames = os.listdir(oldFloderName)
+    print(fileNames)
+
+    # 使用多进程的方式复制文件
+
+    pool = Pool(5)
+    for name in fileNames:
+        pool.apply_async(copyFileTask, (name, oldFloderName, newFloderName))
+
+
+if __name__ == "__main__":
+    main()
+
+```
+
+
+
