@@ -49,7 +49,7 @@ aStr.isalpha()#判断是否是纯英文
 aStr.isdigit()#判断是否是纯数字
 aStr.isalnum()#判断是否是数字和字母的组合
 aStr.isspace()#判断是否是纯空格
-aStr.join(str)#在str的(len-1)每个字符后面插入aStr，构造出一个新的字符串
+aStr.join("def")#在str的(len-1)每个字符后面插入aStr，构造出一个新的字符串,结果dabceabcf
 mystr = "w o s t c"
 name = "sba"
 print(mystr.join(name))#sw o s t cbw o s t ca 结果

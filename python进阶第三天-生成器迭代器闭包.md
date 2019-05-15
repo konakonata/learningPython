@@ -1,4 +1,4 @@
-生成器：一边循环一边计算的就叫生成器，generator
+ 生成器：一边循环一边计算的就叫生成器，generator
 
 ```python
 from collections import Iterable
@@ -238,10 +238,11 @@ print(f1())
 ```python
 #有参装饰器
 def func(func):
-    def inner(*args,**kwargs):#装饰函数有几个参数，内部函数也要有相应的参数
+    def inner(*args):#装饰函数有几个参数，内部函数也要有相应的参数
         print("---------11-----")
-        func(*args,**kwargs)#解决不定长参数的问题
+        func(*args)#解决不定长参数的问题
         print("----------222-----")
+    return inner
 @func
 def test(a,b):
     print("---a=%d----b=%d"%(a,b))
@@ -315,7 +316,7 @@ class Person(object):
         self.name = name
         self.age = age
     def eat(self):
-        print("------%s正在吃----"%self.name)
+        print("------%s正在吃----"%self.name
 def run(self):
     print("------------%s正在跑----"%self.name)
 p1 = Person("p1",10)

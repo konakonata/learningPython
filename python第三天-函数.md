@@ -85,6 +85,8 @@ lambda args : pass #匿名函数不能直接调用print，lambda需要表达式
 def test (a, b, xxx):
     return xxx(a, b)
 result = test(a , b, lambda x, y : x - y)#通过改这里的加减乘除号就能进行不同的运算，匿名函数可以作为参数传递
+a = lambda x, y: x - y#lambda表达式的应用
+print(a(1,2))
 b = []
 b.sort(key = lambda x : x[key1], reverse = true)#用字典中的某个键值来排序，true为倒序
 ```
