@@ -13,7 +13,11 @@ class Person:
 
     def getAge(self):
         return self.__age
-    
+    # num = property(getNum,setNum)#升级版
+   # @property
+    #def num(self):#gettr
+       # return self.__num
+
     #私有方法，不会暴露给外部，只能通过类的其他函数来调用此私有方法
     def __test(self):
         print("我的天啊")

@@ -222,7 +222,7 @@ if __name__ == '__main__':
     pw.join()
 
     # 再调用读取队列的子进程
-    pr = Process(target=read, args = {q,})#传参方式
+    pr = Process(target=read, args = (q,))#传参方式
     pr.start()
     pr.join()
 
@@ -272,7 +272,7 @@ def copyFileTask(name, oldFloderName,newFloderName):
     os.chdir(oldFloderName)
     fr = open(name)
     os.chdir(newFloderName)
-    fw = open(name, 'x')
+    fw = open(name, 'w+')
     content = fr.read()
     fw.write(content)
     fr.close()

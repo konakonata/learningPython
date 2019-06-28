@@ -107,3 +107,210 @@ if __name__ == '__main__':
 
 select版服务器可以批量处理大量客户端的连接请求，同时筛选出包含数据的请求，返回给应用程序。
 
+select 有最大限制，64位的服务器只能监听2047个客户端的请求。
+
+```python
+#select回显服务器
+import select
+import socket
+import sys
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(("", 8080))
+server.listen(5)#这个数字在linux中无所谓
+
+inputs = [server, sys.stdin]#sys.stdin也是相当于一个套接字
+
+running = True
+
+while True:
+    #调用select方法，阻塞等待
+    #可接收，可发送和异常三个列表
+    readable, writable, exceptional = select.select(inputs,[], [])
+
+    #数据抵达，循环
+    for sock in readable:
+        #监听到有新的连接
+        if sock == server:
+            conn, addr = sock.accept()
+            #select监听的socket
+            inputs.append(conn)
+        elif sock == sys.stdin:
+            cmd = sys.stdin.readline()
+            running = False
+            break
+        else:
+            #读取客户端发送的数据
+            data = sock.recv(1024)
+            if data:
+                sock.send(data)
+            else:
+                #移除select监听的socket
+                inputs.remove(sock)
+                sock.close()
+    if not running:
+        break
+```
+
+7.epoll版服务器
+
+poll解决了select服务器上限的问题，但是还是通过循环的方式来筛选客户端的socket，效率低。
+
+epoll使用事件通知机制，让客户端socket根据已定规则修改自身。
+
+```python
+# epoll服务器
+import socket
+import select
+
+# 创建tcp协议socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# 绑定服务器的本地端口
+s.bind(("", 7808))
+# 设置可以重复使用绑定
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+# 设置监听
+s.listen(5)
+
+# 创建epoll对象
+epoll = select.epoll()
+
+# 测试，用来打印socket对应的文件描述符
+# print(s.fileno())
+# pring(select.EPOLLIN|select.EPOLLET)
+
+# 注册事件到epoll中
+# epoll.register(fd[,eventmask])
+# 注意，如果fd已经注册过，那么会发生异常
+# 将创建的socket添加到epoll的事件监听中
+# fileno()文件描述符
+# select.EPOLLIN    可读事件
+# 　select.EPOLLOUT   可写事件
+# 　select.EPOLLERR   错误事件
+# 　select.EPOLLHUP   客户端断开事件
+epoll.register(s.fileno(), select.EPOLLIN | select.EPOLLET)
+#创建空字典，用来存储信息
+connections = {}
+address = {}
+
+# 等待客户端发送请求
+while True:
+    # epoll进行fd扫描的地方，未指定超时时间则阻塞等待
+    epoll_list = epoll.poll()
+
+    # 对事件进行判断
+    # fd是文件描述符，events则保存可读或可写的状态
+    for fd, events in epoll_list:
+        print(fd)
+        print(events)
+        # 如果socket创建的套接字被激活
+        if fd == s.fileno():
+            conn, addr = s.accept()
+            print("有新的客户到来%s" % addr)
+
+            # 将conn和addr的信息分别保存起来
+            connections[conn.fileno()] = conn
+            address[conn.fileno()] = addr
+
+            # 向epoll注册连接socket的可读事件
+            epoll.register(conn.fileno(), select.EPOLLIN | select.EPOLLET)
+        elif events == select.EPOLLIN:
+            #从激活fd上接收
+            recvData = connections[fd].recv(1024)
+
+            if len(recvData) > 0:
+                print("recvData====%s"%recvData)
+            else:
+                #从epoll中移除该连接的fd
+                epoll.unregister(fd)
+                #server侧主动关闭该连接的fd
+                connections[fd].close()
+
+                print("%s------------off-------"%str(address[fd]))
+```
+
+8.协程
+
+协程又称微线程，纤程。
+
+上下文：之前用到的资源和之后要用的资源是固定的。
+
+计算密集型：需要占用大量cpu资源，用多进程
+
+io密集型：需要网络功能，大量的时间在等待网络数据的到来，多线程或协程
+
+```python
+#协程的简单实现
+import time
+def A():
+    while True:
+        print("-------a---------")
+        yield#生成器
+        time.sleep(0.5)
+
+def B(c):
+    while True:
+        print("-----------b-------")
+        c.__next__()#python3之后，generator函数没有next(),全部变成了__next__()
+        time.sleep(0.5)
+
+
+if __name__ == '__main__':
+    a = A()#a就是生成器
+    B(a)
+```
+
+greenlet版协程
+
+```python
+#sudo pip3 install greenlet 要先安装 pip安装到python2，pip3安装到python3
+from greenlet import greenlet
+import time
+
+
+def A():
+    while True:
+        print("-----A-----")
+        gr2.switch()#切换到函数B
+        time.sleep(0.5)
+
+
+def B():
+    while True:
+        print("-----------B---------")
+        gr1.switch()#切换到函数A，从A函数切换过来之后先执行time.sleep(0.5)，然后再次循环，走到此处再次切换到函数A
+        time.sleep(0.5)
+
+
+gr1 = greenlet(A)
+gr2 = greenlet(B)
+
+gr1.switch()#进入函数A
+```
+
+gevent版协程,在遇到耗时操作时，会自动切换协程
+
+```python
+# sudo pip3 install gevent
+# coding=utf-8
+#协程任务切换
+import gevent
+
+
+def f(n):
+    for i in range(n):
+        print(gevent.getcurrent(), i)
+        #用来模拟耗时操作，不能用time模块的sleep()
+        gevent.sleep(1)
+
+
+g1 = gevent.spawn(f, 5)
+g2 = gevent.spawn(f, 5)
+g3 = gevent.spawn(f, 5)
+g1.join()
+g2.join()
+g3.join()
+```
+
+
+
